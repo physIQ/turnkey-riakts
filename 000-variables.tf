@@ -1,14 +1,14 @@
 variable "StackName" {
-   default="jim-riakts-01"
+   default="YOUR_STACK_NAME"
 }
 
 variable "ProjectName" {
-    default = "jim-test-physiq"
+    default = "YOUR_PROJECT_NAME"
 }
 
 # Make sure there are no spaces in your list. Must be in cidr format, e.g. 10.0.0.1/32,192.168.100.0/24
 variable "trusted_ips" {
-   default = "50.193.90.184/29"
+   default = "YOUR_TRUSTED_LIST_HERE"
 }
 
 # Number of servers
