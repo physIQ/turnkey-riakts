@@ -23,7 +23,13 @@ else
     done
 
    # Execute the locking join
-   /usr/local/sbin/consul lock -verbose riak-join /sbin/riak-admin cluster join riak@${OUT} >> /tmp/riak-join.log 2>&1 && /sbin/riak-admin cluster plan >> /tmp/riak-join.log 2>&1 && /sbin/riak-admin cluster commit >>  /tmp/riak-join.log 2>&1
+   /usr/local/sbin/consul lock -verbose riakts-join "/sbin/riak-admin cluster join riak@${OUT} >> /tmp/riak-join.log 2>&1 && /sbin/riak-admin cluster plan >> /tmp/riak-join.log 2>&1 && /sbin/riak-admin cluster commit >>  /tmp/riak-join.log 2>&1 && sleep 30
+   DONE=1
+   while [ \$DONE -ne 0 ]; do
+     sleep 5
+     riak-admin member-status|egrep -e '(^joining|^valid)'|awk '{print \$3}' |grep -- '--' > /dev/null 2>&1
+     DONE=\$?
+   done"
 
 fi
 

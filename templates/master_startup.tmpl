@@ -4,12 +4,19 @@
 sed -i 's/enforcing/permissive/g' /etc/selinux/config
 setenforce 0
 
-yum makecache
+yum makecache fast
 yum -y install gcc gcc-c++ python-devel systemd-python epel-release
-sleep 2
-yum -y install python-pip
+yum -y install python-pip m2crypto
 
-pip install salt
+cat << EOF > /etc/yum.repos.d/salt.repo
+[saltstack-repo]
+name=SaltStack repo for Red Hat Enterprise Linux \$releasever
+baseurl=https://repo.saltstack.com/yum/redhat/\$releasever/\$basearch/latest
+enabled=1
+gpgcheck=1
+gpgkey=https://repo.saltstack.com/yum/redhat/\$releasever/\$basearch/latest/SALTSTACK-GPG-KEY.pub
+       https://repo.saltstack.com/yum/redhat/\$releasever/\$basearch/latest/base/RPM-GPG-KEY-CentOS-7
+EOF
 
 gsutil -m rsync -r gs://${bucket_name}/salt /srv
 
@@ -39,51 +46,26 @@ EOF
 
 cat << EOF > /etc/salt/master
 interface: 0.0.0.0
+autosign_file: /etc/salt/autosign.conf
 reactor:
-  - 'salt/auth':
-    - /srv/reactor/auth-pending.sls
   - 'salt/minion/${stack_name}-*/start':
     - /srv/reactor/auth-complete.sls
 
 EOF
 
-cat << EOF > /usr/lib/systemd/system/salt-master.service
-[Unit]
-Description=The Salt Master Server
-After=syslog.target network.target
-
-[Service]
-LimitNOFILE=16384
-Type=notify
-NotifyAccess=all
-ExecStart=/usr/bin/salt-master
-KillMode=process
-
-[Install]
-WantedBy=multi-user.target
-
+cat << EOF > /etc/salt/autosign.conf
+*
 EOF
 
-cat << EOF > /usr/lib/systemd/system/salt-minion.service
-[Unit]
-Description=The Salt Minion Server
-After=syslog.target network.target
+yum install -y salt-master salt-minion salt-ssh salt-syndic salt-cloud
 
-[Service]
-Type=simple
-LimitNOFILE=8192
-ExecStart=/usr/bin/salt-minion
-KillMode=process
-
-[Install]
-WantedBy=multi-user.target
-
-EOF
+salt-call --local state.highstate
 
 systemctl daemon-reload
 systemctl enable salt-master
 systemctl enable salt-minion
 
 systemctl start salt-master
+sleep 5
 systemctl start salt-minion
 
