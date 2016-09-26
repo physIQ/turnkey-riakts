@@ -13,43 +13,41 @@ elasticsearch:
     - enable: True
     - require:
       - pkg: elasticsearch
+      - sls: common.java
     - watch:
         - file: /etc/elasticsearch/*
-  require:
-    - sls: common.java
 
 # CREATE ELASTICSEARCH CONFIGURATION FILES
 /etc/elasticsearch/elasticsearch.yml:
   file.managed:
     - source: salt://common/elk-stack/files/etc/elasticsearch/elasticsearch.yml
-  require:
-    - pkg: elasticsearch
+    - require:
+      - pkg: elasticsearch
 
 /etc/elasticsearch/logging.yml:
   file.managed:
     - source: salt://common/elk-stack/files/etc/elasticsearch/logging.yml
-  require:
-    - pkg: elasticsearch
+    - require:
+      - pkg: elasticsearch
 
 #INSTALL AND CONFIGURE LOGSTASH SERVICE
-install-logstash:
+logstash:
   pkg.installed:
     - sources:
       - logstash: {{ salt['pillar.get']('software:logstash:url') }}
-  require:
-    - sls: common.redis
-    - sls: common.java
-    - pkg: elasticsearch
+    - require:
+      - sls: common.redis
+      - sls: common.java
+      - pkg: elasticsearch
 
 # CREATE LOGSTASH CONFIGURATION FILES
 /etc/logstash/conf.d/logstash.conf:
   file:
     - managed
     - source: salt://common/elk-stack/files/etc/logstash/conf.d/logstash.conf
-  require:
-    - file: /etc/logstash/conf.d
-    - pkg: elasticsearch
-    - pkg: logstash
+    - require:
+      - pkg: elasticsearch
+      - pkg: logstash
 
 /etc/logstash/patterns:
   file.recurse:
@@ -62,33 +60,21 @@ install-logstash:
       - JAVA_OPTS="-Dcom.sun.management.jmxremote -Dcom.sun.management.jmxremote.port=12345 -Dcom.sun.management.jmxremote.local.only=false -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.ssl=false"
       - LS_OPTS="--pluginpath /opt/logstash/lib"
 
-#INSTALL CUSTOM LOGSTASH FILTERS
-/opt/logstash/lib/logstash/filters/level.rb:
-  file:
-    - managed
-    - source: salt://common/elk-stack/files/opt/logstash/filters/level.rb
-    - makedirs: True
-  require:
-    - pkg: logstash
-
-
 # CREATE AND START LOGSTASH SERVICE
 configure-logstash-service:
   service.running:
     - name: logstash
     - enable: True
-  require:
-    - pkg: logstash
-    - file: /etc/logstash/conf.d/logstash.conf
+    - require:
+      - pkg: logstash
+      - file: /etc/logstash/conf.d/logstash.conf
+      - sls: common.java
 
-# INSTALL AND CONFIGURE KIBANA 4.0
-extract-install-kibana:
-  archive.extracted:
-    - name: /opt/kibana/
-    - source: {{ salt['pillar.get']('software:kibana:url') }}
-    - source_hash: {{ salt['pillar.get']('software:kibana:sha') }}
-    - archive_format: tar
-    - tar_options: "xz --strip=1"
+# INSTALL AND CONFIGURE KIBANA 4.6
+kibana:
+  pkg.installed:
+    - sources:
+      - kibana: {{ salt['pillar.get']('software:kibana:url') }}
   file.managed:
     - name: /opt/kibana/config/kibana.yml
     - source: salt://common/elk-stack/files/opt/kibana/config/kibana.yml
@@ -96,41 +82,15 @@ extract-install-kibana:
     - user: root
     - group: root
     - require:
-      - archive: /opt/kibana/
-  require:
-    - pkg: elasticsearch
-    - pkg: logstash
-
-
-# SETUP KIBANA SERVICE - TODO WHY CAN'T WE USE SALT SERVICE STATE
-install-kibana-service:
-  file.managed:
-    - name: /etc/systemd/system/kibana4.service
-    - source: salt://common/elk-stack/files/etc/systemd/system/kibana4.service
-  cmd.run:
-    - name: "systemctl start kibana4"
-  require:
-    - pkg: elasticsearch
-    - pkg: logstash
-enable-kibana-service:
-  cmd.run:
-    - name: "systemctl enable kibana4"
-  require:
-    - pkg: elasticsearch
-    - pkg: logstash
-    - file: /etc/systemd/system/kibana4.service
-
-#  service.running:
-#    - name: kibana4.service
-#    - enable: True
-#    - provider: service
-#    - watch:
-#      - file: /opt/kibana/config/*
-#  require:
-#    - pkg: elasticsearch
-#    - pkg: logstash
-
-
+      - pkg: kibana
+  service.running:
+    - enable: True
+    - provider: service
+    - watch:
+      - file: /opt/kibana/config/*
+    - require:
+      - pkg: kibana
+      - sls: common.java
 
 /etc/nginx/locations/kibana.conf:
   file.managed:

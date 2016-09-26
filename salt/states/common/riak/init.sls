@@ -2,13 +2,18 @@ include:
   - common.java
   - common.riak.consul
 
-riak:
+riak-ts:
   pkg.installed:
     - sources:
-      - riak: {{ salt['pillar.get']('software:riak:url') }}
+      - riak-ts: {{ salt['pillar.get']('software:riak-ts:url') }}
+
+riak-ts-service:
   service:
+    - name: riak
     - running
-    - enable: True
-    - provider: service
     - require:
-      - pkg: riak
+      - pkg: riak-ts
+  cmd.run:
+    - name: systemctl enable riak
+    - require:
+      - pkg: riak-ts

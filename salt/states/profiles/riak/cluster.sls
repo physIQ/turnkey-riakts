@@ -16,4 +16,5 @@ include:
   - require: 
     - service: riak
     - service: consul
+    - file: /tmp/cluster-join.sh
 

@@ -8,6 +8,20 @@ include:
   - profiles.riak.zabbix-agent
   - profiles.riak.consul-agent
 
+/opt/riak:
+  file.directory:
+  - makedirs: True
+  - user: riak
+  - group: riak
+  - dir_mode: 755
+  - file_mode: 644
+  - recurse:
+    - user
+    - group
+    - mode
+  - require_in:
+    - service: riak
+
 /opt/riak/fast:
   file.directory:
   - makedirs: True
@@ -21,8 +35,8 @@ include:
     - mode
   - require_in:
     - service: riak
-  require:
-  - file: /opt/riak
+  - require:
+    - file: /opt/riak
 
 /opt/riak/slow:
   file.directory:
@@ -37,8 +51,8 @@ include:
     - mode
   - require_in:
     - service: riak
-  require:
-  - file: /opt/riak
+  - require:
+    - file: /opt/riak
 
 # Config file
 /etc/riak/riak.conf:
